@@ -3348,7 +3348,11 @@ window.App = (function() {
             target: '_blank'
           }, 'Invite Link')).outerHTML,
           crel('span', { style: '' }, crel('i', { class: 'fas fa-gavel fa-is-left' }), 'Read the chat rules in the info panel.').outerHTML,
-          crel('span', { style: '' }, crel('i', { class: 'fas fa-question-circle fa-is-left' }), 'Ensure you read the FAQ top left!').outerHTML
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-question-circle fa-is-left' }), 'Ensure you read the FAQ top left!').outerHTML,
+          crel('span', { style: '' }, crel('i'), 'AAAAAAAAAAAAA!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fal fa-eye-evil fa-is-left' }), 'We are all just figments of Yamok\'s imagination!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-gavel fa-is-left' }), 'Unspoken Rule #1: Respect the Axolotl!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-cubes fa-is-left' }), 'Sorta Like Minecraft Splash Text, but Stem Place!').outerHTML,
         ],
         curElem: 0,
         intervalID: 0,
