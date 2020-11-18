@@ -3369,7 +3369,17 @@ window.App = (function() {
             target: '_blank'
           }, 'Invite Link')).outerHTML,
           crel('span', { style: '' }, crel('i', { class: 'fas fa-gavel fa-is-left' }), 'Read the chat rules in the info panel.').outerHTML,
-          crel('span', { style: '' }, crel('i', { class: 'fas fa-question-circle fa-is-left' }), 'Ensure you read the FAQ top left!').outerHTML
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-question-circle fa-is-left' }), 'Ensure you read the FAQ top left!').outerHTML,
+          crel('span', { style: '' }, crel('i'), 'AAAAAAAAAAAAA!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fal fa-eye-evil fa-is-left' }), 'We are all just figments of Yamok\'s imagination!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-gavel fa-is-left' }), 'Unspoken Rule #1: Respect the Axolotl!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-cubes fa-is-left' }), 'Sorta Like Minecraft Splash Text, but Stem Place!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fal fa-turtle fa-is-left' }), 'Broke me Turt! =,( ').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-mug-hot fa-is-left' }), 'Unspoken Rule #2: Never ever let it cool!').outerHTML,
+          //crel('span', { style: '' }, crel('i'), 'Wow! That really is a :<Username>Moment:').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-eye fa-is-left' }), 'Hello! That\'s right! I know you\'re watching me! I have a conscious!').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fal fa-rabbit fa-is-left' }), 'Once, I saw a bnuuy in a field. A Hnok scared it when it crashed into a pnod with a dcuk in it').outerHTML,
+          crel('span', { style: '' }, crel('i', { class: 'fas fa-film fa-is-left' }), 'When is the SP Documentary coming out? Soon', crel('i', { class: 'fas fa-trademark fa-is-right` })).outerHTML 
         ],
         curElem: 0,
         intervalID: 0,
