@@ -114,7 +114,6 @@ public class PacketHandler {
         if (obj instanceof ClientChatHistory && user.hasPermission("chat.history")) handleChatHistory(channel, user, ((ClientChatHistory) obj));
         if (obj instanceof ClientChatbanState) handleChatbanState(channel, user, ((ClientChatbanState) obj));
         if (obj instanceof ClientChatMessage && user.hasPermission("chat.send")) handleChatMessage(channel, user, ((ClientChatMessage) obj));
-        if (obj instanceof ClientUserUpdate) handleClientUserUpdate(channel, user, ((ClientUserUpdate) obj));
         if (obj instanceof ClientChatLookup && user.hasPermission("chat.lookup")) handleChatLookup(channel, user, ((ClientChatLookup) obj));
         if (obj instanceof ClientAdminPlacementOverrides && user.hasPermission("user.admin")) handlePlacementOverrides(channel, user, ((ClientAdminPlacementOverrides) obj));
         if (obj instanceof ClientAdminMessage && user.hasPermission("user.alert")) handleAdminMessage(channel, user, ((ClientAdminMessage) obj));
@@ -242,10 +241,10 @@ public class PacketHandler {
             boolean gotLock = user.tryGetPlacingLock();
             if (gotLock) {
                 try {
-                    boolean doCaptcha = App.isCaptchaEnabled();
+                    boolean doCaptcha = (user.isOverridingCaptcha() || App.isCaptchaEnabled()) && App.isCaptchaConfigured();
                     if (doCaptcha) {
                         int pixels = App.getConfig().getInt("captcha.maxPixels");
-                        if (pixels != 0) {
+                        if (!user.isOverridingCaptcha() && pixels != 0) {
                             boolean allTime = App.getConfig().getBoolean("captcha.allTime");
                             doCaptcha = (allTime ? user.getAllTimePixelCount() : user.getPixelCount()) < pixels;
                         }
@@ -382,52 +381,8 @@ public class PacketHandler {
         server.send(channel, new ServerChatbanState(user.isPermaChatbanned(), user.getChatbanReason(), user.getChatbanExpiryTime()));
     }
 
-    public void handleClientUserUpdate(WebSocketChannel channel, User user, ClientUserUpdate clientUserUpdate) {
-        Map<String,String> map = clientUserUpdate.getUpdates();
-        Map<String,Object> toBroadcast = new HashMap<>();
-
-        String nameColor = map.get("NameColor");
-        if (nameColor != null && !nameColor.trim().isEmpty()) {
-            try {
-                int t = Integer.parseInt(nameColor);
-                if (t >= -2 && t < App.getPalette().getColors().size()) {
-                    if (t == -1 && !user.hasPermission("chat.usercolor.rainbow")) {
-                        server.send(channel, new ServerACKClientUpdate(false, "Color reserved for staff members", "NameColor", null));
-                    }
-                    if (t == -2 && !user.hasPermission("chat.usercolor.donator")) {
-                        server.send(channel, new ServerACKClientUpdate(false, "Color reserved for donators", "NameColor", null));
-                        return;
-                    }
-                    if (t == -2 && !user.hasPermission("chat.usercolor.donator")) {
-                        server.send(channel, new ServerACKClientUpdate(false, "Color reserved for donators", "NameColor", null));
-                        return;
-                    }
-                    if (t == -3 && !user.hasPermission("chat.usercolor.hothot")) {
-                        server.send(channel, new ServerACKClientUpdate(false, "Color reserved for those who went to the Polar Express event", "NameColor", null));
-                        return;
-                    }
-                    if (t < -3 && !user.hasPermission("chat.usercolor.trans")) {
-                        server.send(channel, new ServerACKClientUpdate(false, "Color reserved for Mikarific", "NameColor", null));
-                        return;
-                    }
-                    user.setChatNameColor(t, true);
-                    server.send(channel, new ServerACKClientUpdate(true, null, "NameColor", String.valueOf(t)));
-                    toBroadcast.put("NameColor", String.valueOf(t));
-                } else {
-                    server.send(channel, new ServerACKClientUpdate(false, "Color index out of bounds", "NameColor", null));
-                }
-            } catch (NumberFormatException nfe) {
-                server.send(channel, new ServerACKClientUpdate(false, "Invalid color index", "NameColor", null));
-            }
-        }
-
-        if (!App.getConfig().getBoolean("oauth.snipMode") && toBroadcast.size() > 0) {
-            server.broadcast(new ServerChatUserUpdate(user.getName(), toBroadcast));
-        }
-    }
-
     public void handleChatHistory(WebSocketChannel channel, User user, ClientChatHistory clientChatHistory) {
-        server.send(channel, new ServerChatHistory(App.getDatabase().getlastXMessagesForSocket(100, false, false)));
+        server.send(channel, new ServerChatHistory(App.getDatabase().getlastXMessagesForSocket(100, user.hasPermission("chat.history.purged"), false)));
     }
 
     public void handleChatMessage(WebSocketChannel channel, User user, ClientChatMessage clientChatMessage) {
@@ -442,7 +397,7 @@ public class PacketHandler {
         if (message.length() > charLimit) message = message.substring(0, charLimit);
         if (user == null) { //console
             Integer cmid = App.getDatabase().createChatMessage(0, nowMS / 1000L, message, "");
-            server.broadcast(new ServerChatMessage(new ChatMessage(cmid, "CONSOLE", nowMS / 1000L, message, null, null, 0, null)));
+            server.broadcast(new ServerChatMessage(new ChatMessage(cmid, "CONSOLE", nowMS / 1000L, message, null, null, null, 0, null)));
         } else {
             if (!user.canChat()) return;
             if (message.trim().length() == 0) return;
@@ -464,7 +419,7 @@ public class PacketHandler {
                     toFilter = toSend;
                 }
                 Integer cmid = App.getDatabase().createChatMessage(user.getId(), nowMS / 1000L, message, toFilter);
-                server.broadcast(new ServerChatMessage(new ChatMessage(cmid, user.getName(), nowMS / 1000L, toSend, user.getChatBadges(), user.getChatNameClasses(), user.getChatNameColor(), usersFaction)));
+                server.broadcast(new ServerChatMessage(new ChatMessage(cmid, user.getName(), nowMS / 1000L, toSend, null, user.getChatBadges(), user.getChatNameClasses(), user.getChatNameColor(), usersFaction)));
             } catch (UnableToExecuteStatementException utese) {
                 utese.printStackTrace();
                 System.err.println("Failed to execute the ChatMessage insert statement.");
