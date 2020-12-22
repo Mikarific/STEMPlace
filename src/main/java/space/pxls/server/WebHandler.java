@@ -1043,7 +1043,7 @@ public class WebHandler {
                 } else if (t == -3 && !user.hasPermission("chat.usercolor.hothot")) {
                     sendBadRequest(exchange, "Color reserved for people who went to the hothot event");
                     return;
-                } else if (t == -3 && !user.hasPermission("chat.usercolor.trans")) {
+                } else if (t == -4 && !user.hasPermission("chat.usercolor.trans")) {
                     sendBadRequest(exchange, "Color reserved for mika");
                     return;
                 }
