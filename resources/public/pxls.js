@@ -5122,6 +5122,8 @@ window.App = (function() {
         self.elements.username_color_select.empty().append(
           user.hasPermission('chat.usercolor.rainbow') ? crel('option', { value: -1, class: 'rainbow' }, '*. Rainbow') : null,
           user.hasPermission('chat.usercolor.donator') ? crel('option', { value: -2, class: 'donator' }, '*. Donator') : null,
+          user.hasPermission('chat.usercolor.hothot') ? crel('option', { value: -3, class: 'hothot' }, '*. HotHot') : null,
+          user.hasPermission('chat.usercolor.trans') ? crel('option', { value: -4, class: 'trans' }, '*. Trans') : null,
           place.palette.map(({ name, value: hex }, i) => crel('option', {
             value: i,
             'data-idx': i,
