@@ -1040,6 +1040,12 @@ public class WebHandler {
                 } else if (t == -2 && !user.hasPermission("chat.usercolor.donator")) {
                     sendBadRequest(exchange, "Color reserved for donators");
                     return;
+                } else if (t == -3 && !user.hasPermission("chat.usercolor.hothot")) {
+                    sendBadRequest(exchange, "Color reserved for donators");
+                    return;
+                } else if (t == -3 && !user.hasPermission("chat.usercolor.trans")) {
+                    sendBadRequest(exchange, "Color reserved for donators");
+                    return;
                 }
 
                 user.setChatNameColor(t, true, !App.getConfig().getBoolean("oauth.snipMode"));
