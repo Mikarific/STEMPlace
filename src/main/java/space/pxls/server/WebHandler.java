@@ -1041,10 +1041,10 @@ public class WebHandler {
                     sendBadRequest(exchange, "Color reserved for donators");
                     return;
                 } else if (t == -3 && !user.hasPermission("chat.usercolor.hothot")) {
-                    sendBadRequest(exchange, "Color reserved for donators");
+                    sendBadRequest(exchange, "Color reserved for people who went to the hothot event");
                     return;
                 } else if (t == -3 && !user.hasPermission("chat.usercolor.trans")) {
-                    sendBadRequest(exchange, "Color reserved for donators");
+                    sendBadRequest(exchange, "Color reserved for mika");
                     return;
                 }
 
