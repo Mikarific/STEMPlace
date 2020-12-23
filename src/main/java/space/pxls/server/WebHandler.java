@@ -1033,7 +1033,7 @@ public class WebHandler {
 
         try {
             int t = Integer.parseInt(nameColor.getValue());
-            if (t >= -2 && t < App.getPalette().getColors().size()) {
+            if (t >= -4 && t < App.getPalette().getColors().size()) {
                 if (t == -1 && !user.hasPermission("chat.usercolor.rainbow")) {
                     sendBadRequest(exchange, "Color reserved for staff members");
                     return;
