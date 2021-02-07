@@ -64,20 +64,22 @@ roleID {
 | `chat.delete` | `/admin/delete` | Delete chat messages | staff |
 | `chat.history` | | Retrieve chat history | user |
 | `chat.history.purged` | | Show purged messages in chat and chat history | staff |
+| `chat.history.shadowbanned` | | Show shadow-banned messages in chat and chat history | staff |
 | `chat.lookup` | | Chat message lookups | staff |
 | `chat.purge` | `/admin/chatPurge` | Purge (multiple) chat messages | staff |
 | `chat.report` | `/reportChat` | Report chat messages | user |
 | `chat.send` | | Send chat messages | user |
 | `chat.usercolor.rainbow` | | Ability to use rainbow user color | staff |
-| `chat.usercolor.donator` | | Ability to use donator user color | donator |
+| `chat.usercolor.donator`, `chat.usercolor.donator.*` | | Ability to use donator user colors | donator |
+| `chat.usercolor.donator.green` | | Ability to use green donator user color | donator |
+| `chat.usercolor.donator.gray` | | Ability to use green donator user color | donator |
 
 ### User
 
 | Node | Endpoint | Purpose | Default Role |
 | --- | --- | --- | --- |
 | `user.admin` | `/admin/*` | Access to admin client resources | staff |
-| `user.donator` | `/donator/*` | donator role | donator |
-| `user.hothot` | `/hothot/*` | hothot role | hothot |
+| `user.donator` | `/donator/*` | Mark the role as a donator role | donator |
 | `user.alert` | | Alerts users | staff |
 | `user.auth` | `/auth`, `/signin`, `/signup`, `/logout` | User authentication | guest |
 | `user.auth` | `/whoami` | List own username and ID | guest |

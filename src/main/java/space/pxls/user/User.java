@@ -329,7 +329,7 @@ public class User {
 
         getRoles().forEach(role -> toReturn.addAll(role.getBadges()));
 
-        if (!App.getConfig().getBoolean("oauth.snipMode")) {
+        if (!App.getSnipMode()) {
             if (this.pixelCountAllTime >= 1000000) {
                 toReturn.add(new Badge("1M+", "1M+ Pixels Placed", "text", null));
             } else if (this.pixelCountAllTime >= 900000) {
@@ -697,26 +697,35 @@ public class User {
         App.getDatabase().setDiscordName(id, discordName);
     }
 
+    public boolean canUseDonatorCharNameColors() {
+        return hasPermission("chat.usercolor.donator") || hasPermission("chat.usercolor.donator.*");
+    }
+
+    public boolean canUseEventCharNameColors() {
+        return hasPermission("chat.usercolor.event") || hasPermission("chat.usercolor.event.*");
+    }
+
     public boolean hasRainbowChatNameColor() {
         return hasPermission("chat.usercolor.rainbow")
                 && this.chatNameColor == -1;
 
     }
 
-     public boolean hasDonatorChatNameColor() {
-        return hasPermission("chat.usercolor.donator")
-                && this.chatNameColor == -2;
-
-    }
-
-    public boolean hasHotHotChatNameColor() {
-        return hasPermission("chat.usercolor.hothot")
-                && this.chatNameColor == -3;
-    }
-
     public boolean hasTransChatNameColor() {
         return hasPermission("chat.usercolor.trans")
-                && this.chatNameColor == -4;
+                && this.chatNameColor == -6;
+    }
+
+    public boolean hasDonatorChatNameColor(String name, Integer idx) {
+        return (canUseDonatorCharNameColors() || hasPermission("chat.usercolor.donator." + name))
+                && this.chatNameColor == -idx;
+
+    }
+
+    public boolean hasEventChatNameColor(String name, Integer idx) {
+        return (canUseEventCharNameColors() || hasPermission("chat.usercolor.event." + name))
+                && this.chatNameColor == -idx;
+
     }
 
     public int getChatNameColor() {
@@ -727,14 +736,19 @@ public class User {
         List<String> toReturn = new ArrayList<>();
         if (this.hasRainbowChatNameColor()) {
             toReturn.add("rainbow");
-        }
-        if (this.hasDonatorChatNameColor()) {
+        } else if (this.hasDonatorChatNameColor("green", 2)) {
             toReturn.add("donator");
-        }
-        if (this.hasHotHotChatNameColor()) {
-            toReturn.add("hothot");
-        }
-        if (this.hasTransChatNameColor()) {
+            toReturn.add("donator--green");
+        } else if (this.hasDonatorChatNameColor("gray", 3)) {
+            toReturn.add("donator");
+            toReturn.add("donator--gray");
+        } else if (this.hasEventChatNameColor("hothot", 4)) {
+            toReturn.add("event");
+            toReturn.add("event--hothot");
+        } else if (this.hasEventChatNameColor("nebula", 5)) {
+            toReturn.add("event");
+            toReturn.add("event--nebula");
+        } else if (this.hasTransChatNameColor()) {
             toReturn.add("trans");
         }
         return toReturn.size() != 0 ? toReturn : null;

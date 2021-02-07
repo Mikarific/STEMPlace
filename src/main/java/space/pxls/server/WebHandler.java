@@ -6,10 +6,10 @@ import com.google.gson.JsonParser;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.loader.ClasspathLoader;
-import com.typesafe.config.ConfigList;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.handlers.CookieSameSiteMode;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.*;
@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import at.favre.lib.crypto.bcrypt.*;
@@ -161,6 +162,7 @@ public class WebHandler {
                     List<DBCanvasReport> canvasReports = new ArrayList<>();
                     List<Faction> factions = App.getDatabase().getFactionsForUID(profileUser.getId()).stream().map(Faction::new).collect(Collectors.toList());
 
+                    m.put("snip_mode", App.getSnipMode());
                     m.put("requested_self", requested_self);
                     m.put("profile_of", profileUser);
                     m.put("factions", factions);
@@ -263,7 +265,7 @@ public class WebHandler {
                         } else if (App.getDatabase().getOwnedFactionCountForUID(user.getId()) >= App.getConfig().getInt("factions.maxOwned")) {
                             sendBadRequest(exchange, String.format("You've reached the maximum number of owned factions (%d).", App.getConfig().getInt("factions.maxOwned")));
                         } else if (App.getConfig().getInt("factions.minPixelsToCreate") > user.getAllTimePixelCount()) {
-                            send(403, exchange, String.format("You do not meet the minimum all-time pixel requirements to create a faction. The current minimum is %d.", App.getConfig().getInt("chat.minPixelsToCreate")));
+                            sendForbidden(exchange, String.format("You do not meet the minimum all-time pixel requirements to create a faction. The current minimum is %d.", App.getConfig().getInt("factions.minPixelsToCreate")));
                         } else {
                             Optional<Faction> faction = FactionManager.getInstance().create(name, tag, user.getId(), color);
                             if (faction.isPresent()) {
@@ -662,14 +664,35 @@ public class WebHandler {
     }
 
     private void setAuthCookie(HttpServerExchange exchange, String loginToken, int days) {
-        Calendar cal2 = Calendar.getInstance();
-        cal2.add(Calendar.DATE, -1);
-        exchange.setResponseCookie(new CookieImpl("pxls-token", loginToken).setPath("/").setExpires(cal2.getTime()));
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, days);
+        Calendar pastCalendar = Calendar.getInstance();
+        pastCalendar.add(Calendar.DATE, -1);
+        exchange.setResponseCookie(
+            new CookieImpl("pxls-token", "")
+                .setPath("/")
+                .setExpires(pastCalendar.getTime())
+        );
+
+        Calendar futureCalendar = Calendar.getInstance();
+        futureCalendar.add(Calendar.DATE, days);
         String hostname = App.getConfig().getString("host");
-        exchange.setResponseCookie(new CookieImpl("pxls-token", loginToken).setHttpOnly(true).setPath("/").setDomain("." + hostname).setExpires(cal.getTime()));
-        exchange.setResponseCookie(new CookieImpl("pxls-token", loginToken).setHttpOnly(true).setPath("/").setDomain(hostname).setExpires(cal.getTime()));
+        exchange.setResponseCookie(
+            new CookieImpl("pxls-token", loginToken)
+                .setHttpOnly(true)
+                .setSameSiteMode((exchange.isSecure() ? CookieSameSiteMode.NONE : CookieSameSiteMode.LAX).toString())
+                .setSecure(exchange.isSecure())
+                .setPath("/")
+                .setDomain("." + hostname)
+                .setExpires(futureCalendar.getTime())
+        );
+        exchange.setResponseCookie(
+            new CookieImpl("pxls-token", loginToken)
+                .setHttpOnly(true)
+                .setSameSiteMode((exchange.isSecure() ? CookieSameSiteMode.NONE : CookieSameSiteMode.LAX).toString())
+                .setSecure(exchange.isSecure())
+                .setPath("/")
+                .setDomain(hostname)
+                .setExpires(futureCalendar.getTime())
+        );
     }
 
     public void ban(HttpServerExchange exchange) {
@@ -749,6 +772,11 @@ public class WebHandler {
     public void chatReport(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
+        if (!App.isChatEnabled()) {
+            sendForbidden(exchange, "Chatting and chat actions are disabled");
+            return;
+        }
+
         User user = exchange.getAttachment(AuthReader.USER);
         if (user == null) {
             sendUnauthorized(exchange, "User must be logged in to report chat messages");
@@ -801,6 +829,13 @@ public class WebHandler {
     }
 
     public void chatban(HttpServerExchange exchange) {
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+
+        if (!App.isChatEnabled()) {
+            sendForbidden(exchange, "Chatting and chat actions are disabled");
+            return;
+        }
+
         User user = exchange.getAttachment(AuthReader.USER);
         if (user == null) {
             sendBadRequest(exchange);
@@ -886,6 +921,12 @@ public class WebHandler {
 
         boolean _removal = removal == -1 || removal > 0;
 
+        // TODO(netux): Fix infraestructure and allow to purge during snip mode
+        if (_removal && App.getSnipMode()) {
+            sendForbidden(exchange, "Cannot purge during snip mode");
+            return;
+        }
+
         Chatban chatban;
         if (isUnban) {
             chatban = Chatban.UNBAN(target, user, reason);
@@ -897,7 +938,6 @@ public class WebHandler {
 
         chatban.commit();
 
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.setStatusCode(200);
         exchange.getResponseSender().send("{}");
         exchange.endExchange();
@@ -905,6 +945,11 @@ public class WebHandler {
 
     public void deleteChatMessage(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+
+        if (!App.isChatEnabled()) {
+            sendForbidden(exchange, "Chatting and chat actions are disabled");
+            return;
+        }
 
         User user = exchange.getAttachment(AuthReader.USER);
         if (user == null) {
@@ -968,6 +1013,17 @@ public class WebHandler {
     public void chatPurge(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
+        if (!App.isChatEnabled()) {
+            sendForbidden(exchange, "Chatting and chat actions are disabled");
+            return;
+        }
+
+        // TODO(netux): Fix infraestructure and allow to purge during snip mode
+        if (App.getSnipMode()) {
+            sendForbidden(exchange, "Cannot purge chat during snip mode");
+            return;
+        }
+
         User user = exchange.getAttachment(AuthReader.USER);
         if (user == null) {
             sendBadRequest(exchange);
@@ -1002,11 +1058,6 @@ public class WebHandler {
             return;
         }
 
-        String purgeReason = "$No reason provided.";
-        if (data.contains("reason")) {
-            purgeReason = data.getFirst("reason").getValue();
-        }
-
         App.getDatabase().purgeChat(target, user, Integer.MAX_VALUE, reasonData.getValue(), true);
 
         exchange.setStatusCode(200);
@@ -1016,6 +1067,11 @@ public class WebHandler {
 
     public void chatColorChange(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+
+        if (!App.isChatEnabled()) {
+            sendForbidden(exchange, "Chatting and chat actions are disabled");
+            return;
+        }
 
         User user = exchange.getAttachment(AuthReader.USER);
         if (user == null) {
@@ -1033,22 +1089,30 @@ public class WebHandler {
 
         try {
             int t = Integer.parseInt(nameColor.getValue());
-            if (t >= -4 && t < App.getPalette().getColors().size()) {
+            if (t >= -6 && t < App.getPalette().getColors().size()) {
+                var hasAllDonatorColors = user.hasPermission("chat.usercolor.donator") || user.hasPermission("chat.usercolor.donator.*");
+                var hasAllEventColors = user.hasPermission("chat.usercolor.event") || user.hasPermission("chat.usercolor.event.*");
                 if (t == -1 && !user.hasPermission("chat.usercolor.rainbow")) {
                     sendBadRequest(exchange, "Color reserved for staff members");
                     return;
-                } else if (t == -2 && !user.hasPermission("chat.usercolor.donator")) {
+                } else if (t == -2 && !(hasAllDonatorColors || user.hasPermission("chat.usercolor.donator.green"))) {
                     sendBadRequest(exchange, "Color reserved for donators");
                     return;
-                } else if (t == -3 && !user.hasPermission("chat.usercolor.hothot")) {
+                } else if (t == -3 && !(hasAllDonatorColors || user.hasPermission("chat.usercolor.donator.gray"))) {
+                    sendBadRequest(exchange, "Color reserved for donators");
+                    return;
+                } else if (t == -4 && !(hasAllEventColors || user.hasPermission("chat.usercolor.event.hothot"))) {
                     sendBadRequest(exchange, "Color reserved for people who went to the hothot event");
                     return;
-                } else if (t == -4 && !user.hasPermission("chat.usercolor.trans")) {
+                } else if (t == -5 && !(hasAllEventColors || user.hasPermission("chat.usercolor.event.nebula"))) {
+                    sendBadRequest(exchange, "Color reserved for people who went to the nebula event");
+                    return;
+                } else if (t == -6 && !user.hasPermission("chat.usercolor.trans")) {
                     sendBadRequest(exchange, "Color reserved for mika");
                     return;
                 }
 
-                user.setChatNameColor(t, true, !App.getConfig().getBoolean("oauth.snipMode"));
+                user.setChatNameColor(t, true, !App.getSnipMode());
 
                 exchange.setStatusCode(200);
                 exchange.getResponseSender().send("{}");
@@ -1585,9 +1649,13 @@ public class WebHandler {
                 redirect = redirectCookie != null;
             }
             // let's just delete the redirect cookie
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DATE, -1);
-            exchange.setResponseCookie(new CookieImpl("pxls-auth-redirect", "").setPath("/").setExpires(cal.getTime()));
+            Calendar pastCalendar = Calendar.getInstance();
+            pastCalendar.add(Calendar.DATE, -1);
+            exchange.setResponseCookie(
+                new CookieImpl("pxls-auth-redirect", "")
+                    .setPath("/")
+                    .setExpires(pastCalendar.getTime())
+            );
 
             if (!redirect && exchange.getQueryParameters().get("json") == null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
@@ -1697,7 +1765,12 @@ public class WebHandler {
         if (service != null) {
             String state = service.generateState();
             if (redirect) {
-                exchange.setResponseCookie(new CookieImpl("pxls-auth-redirect", "1").setPath("/"));
+                exchange.setResponseCookie(
+                    new CookieImpl("pxls-auth-redirect", "1")
+                        .setSameSiteMode((exchange.isSecure() ? CookieSameSiteMode.NONE : CookieSameSiteMode.LAX).toString())
+                        .setSecure(exchange.isSecure())
+                        .setPath("/")
+                );
                 redirect(exchange, service.getRedirectUrl(state + "|redirect"));
             } else {
                 respond(exchange, StatusCodes.OK, new SignInResponse(service.getRedirectUrl(state + "|json")));
@@ -1759,10 +1832,11 @@ public class WebHandler {
             (int) App.getConfig().getInt("stacking.maxStacked"),
             services,
             App.getRegistrationEnabled(),
+            App.isChatEnabled(),
             Math.min(App.getConfig().getInt("chat.characterLimit"), 2048),
             App.getConfig().getBoolean("chat.canvasBanRespected"),
             App.getConfig().getStringList("chat.bannerText"),
-            App.getConfig().getBoolean("oauth.snipMode"),
+            App.getSnipMode(),
             App.getConfig().getList("chat.customEmoji").unwrapped()
         )));
     }
@@ -1850,9 +1924,15 @@ public class WebHandler {
             App.getDatabase().insertLookup(user.getId(), exchange.getAttachment(IPReader.IP));
         }
 
-        var lookup = user != null && user.hasPermission("board.check")
-            ? ExtendedLookup.fromDB(App.getDatabase().getFullPixelAt(x, y).orElse(null))
-            : Lookup.fromDB(App.getDatabase().getPixelAt(x, y).orElse(null));
+        Lookup lookup;
+        if (user != null && user.hasPermission("board.check")) {
+            lookup = ExtendedLookup.fromDB(App.getDatabase().getFullPixelAt(x, y).orElse(null));
+        } else {
+            lookup = Lookup.fromDB(App.getDatabase().getPixelAt(x, y).orElse(null));
+            if (lookup != null && App.getSnipMode()) {
+                lookup = lookup.asSnipRedacted();
+            }
+        }
         exchange.getResponseSender().send(App.getGson().toJson(lookup));
     }
 
@@ -1924,8 +2004,14 @@ public class WebHandler {
     public void whoami(HttpServerExchange exchange) {
         exchange.getResponseHeaders()
                 .put(Headers.CONTENT_TYPE, "application/json")
-                .put(HttpString.tryFromString("Access-Control-Allow-Origin"), App.getWhoamiAllowedOrigin())
                 .put(HttpString.tryFromString("Access-Control-Allow-Credentials"), "true");
+
+        String origin = exchange.getRequestHeaders().getFirst(HttpString.tryFromString("Origin"));
+        if (origin != null && App.getWhoamiAllowedOrigins().stream().anyMatch(Predicate.isEqual(origin))) {
+            exchange.getResponseHeaders()
+                    .put(HttpString.tryFromString("Access-Control-Allow-Origin"), origin);
+        }
+
         User user = exchange.getAttachment(AuthReader.USER);
         if (user != null) {
             exchange.getResponseSender().send(App.getGson().toJson(new WhoAmI(user.getName(), user.getId())));

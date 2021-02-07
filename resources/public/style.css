@@ -132,6 +132,7 @@ html {
     --chat-server-action-text-color: #555;
     --chat-user-text-shadow-color: #ccc;
     --chat-purged-text-color: #888;
+    --chat-shadowbanned-text-color: #F66;
 
     --chat-tobottom-text-color: #fff;
     --chat-tobottom-background: #66a;
@@ -390,7 +391,7 @@ dt {
     background-image: linear-gradient(45deg, violet, #308dff, cyan, green, yellow, orange, red, orange, yellow, green, cyan, #308dff, violet, violet);
     background-size: 500px 100%;
     animation: rainbow-move 4s linear 1ms infinite;
-    transform: rotateZ(360deg); /* force rainbow rendering onto GPU if available */
+    transform: rotateZ(360deg); /* force rendering onto GPU if available */
 }
 
 @keyframes donator-move {
@@ -403,13 +404,18 @@ dt {
 }
 
 .donator {
-    background-image: linear-gradient(45deg, #94E044, #02BE01 25%, #005F00 50%, #02BE01 75%, #94E044 90%);
     background-size: 500px 100%;
     animation: donator-move 4s linear 1ms infinite;
-    transform: rotateZ(360deg); /* force donator rendering onto GPU if available */
+    transform: rotateZ(360deg); /* force rendering onto GPU if available */
+}
+.donator.donator--green {
+    background-image: linear-gradient(45deg, #94E044, #02BE01 25%, #005F00 50%, #02BE01 75%, #94E044 90%);
+}
+.donator.donator--gray {
+    background-image: linear-gradient(45deg, hsl(0, 0%, 42.5%) 0, hsl(0, 0%, 63.5%) 50%, hsl(0, 0%, 42.5%) 100%);
 }
 
-@keyframes hothot-move {
+@keyframes event-move {
     0% {
         background-position: 5px 0%;
     }
@@ -418,11 +424,18 @@ dt {
     }
 }
 
-.hothot {
-    background-image: linear-gradient(45deg, #D0C0B3, #AA8B74 25%, #725946 50%, #AA8B74 75%, #D0C0B3);
+.event {
     background-size: 500px 100%;
-    animation: hothot-move 4s linear 1ms infinite;
-    transform: rotateZ(360deg); /* force hothot rendering onto GPU if available */
+    animation: event-move 4s linear 1ms infinite;
+    transform: rotateZ(360deg); /* force event rendering onto GPU if available */
+}
+
+.event.event--hothot {
+    background-image: linear-gradient(45deg, #D0C0B3, #AA8B74 25%, #725946 50%, #AA8B74 75%, #D0C0B3);
+}
+
+.event.event--nebula {
+    background-image: linear-gradient(45deg, #00daff, #0075fb 25%, #963cec 50%, #0075fb 75%, #00daff 100%);
 }
 
 @keyframes trans-move {
@@ -751,17 +764,23 @@ body .message {
 #palette {
     position: relative;
     z-index: 6;
-    padding: 15px 0;
+    padding: 10px 0;
     margin: 0 auto;
 
     overflow-x: auto;
     text-align: center;
     white-space: nowrap;
     background: var(--palette-background);
+}
 
-    /* Scrollbar, Firefox only */
+/* Scrollbar, Firefox only */
+.thin-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #aaa transparent;
+}
+
+.palette-stacking {
+    white-space: normal !important;
 }
 
 /* Scrollbar, Chrome only */
@@ -786,7 +805,7 @@ body .message {
     min-height: 32px;
     border: 2px solid var(--palette-item-border-color);
     border-radius: 3px;
-    margin-right: 10px;
+    margin: 5px;
     cursor: pointer;
     bottom: 0;
     /* the default of `baseline` causes the deselect button to be raised on Firefox */
@@ -1193,6 +1212,10 @@ aside.panel {
     cursor: initial !important;
 }
 
+aside.panel[data-disabled] {
+    display: none;
+}
+
 aside.panel.left {
     right: initial;
     transition: left ease-in-out .25s;
@@ -1591,6 +1614,11 @@ li.chat-line .actions [data-action]:not(:last-of-type):not(:only-child) {
     font-size: .9em;
     color: var(--chat-purged-text-color);
     text-decoration: line-through;
+}
+
+.chat-line.shadow-banned {
+    font-size: .9em;
+    color: var(--chat-shadowbanned-text-color);
 }
 
 #jump-to-bottom {
