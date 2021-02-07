@@ -427,7 +427,7 @@ dt {
 .event {
     background-size: 500px 100%;
     animation: event-move 4s linear 1ms infinite;
-    transform: rotateZ(360deg); /* force event rendering onto GPU if available */
+    transform: rotateZ(360deg); /* force rendering onto GPU if available */
 }
 
 .event.event--hothot {
@@ -451,7 +451,7 @@ dt {
     background-image: linear-gradient(45deg, #55CDFC, #F7A8B8, #FFFFFF, #F7A8B8, #55CDFC, #55CDFC);
     background-size: 250px 100%;
     animation: trans-move 4s linear 1ms infinite;
-    transform: rotateZ(360deg); /* force trans rendering onto GPU if available */
+    transform: rotateZ(360deg); /* force rendering onto GPU if available */
 }
 
 .error {
@@ -1852,13 +1852,13 @@ ul.chat-history, ul.chatban-history {
     text-shadow: none !important;
 }
 
-.username-color-picker.hothot {
+#chat-select-username-color.event {
     background-color: black;
     text-shadow: 0 0 0.5em black;
     color: white;
 }
 
-@keyframes hothot-transition-bg {
+@keyframes event-transition-bg {
     0% { background-color: #D0C0B3; }
     25% { background-color: #AA8B74; }
     50% { background-color: #725946; }
@@ -1866,12 +1866,12 @@ ul.chat-history, ul.chatban-history {
     100% { background-color: #D0C0B3; }
 }
 
-.username-color-picker option.hothot {
-    animation: hothot-transition-bg 4s linear infinite;
+#chat-select-username-color option.event {
+    animation: event-transition-bg 4s linear infinite;
     background-color: brown;
 }
 
-.user.hothot {
+.user.event {
     display: inline-block;
     -webkit-background-clip: text;
     background-clip: text;
@@ -1880,7 +1880,7 @@ ul.chat-history, ul.chatban-history {
     text-shadow: none !important;
 }
 
-.username-color-picker.trans {
+#chat-select-username-color.trans {
     background-color: black;
     text-shadow: 0 0 0.5em black;
     color: white;
@@ -1894,7 +1894,7 @@ ul.chat-history, ul.chatban-history {
     100% { background-color: #55CDFC; }
 }
 
-.username-color-picker option.trans {
+#chat-select-username-color option.trans {
     animation: trans-transition-bg 4s linear infinite;
     background-color: #55CDFC;
 }
